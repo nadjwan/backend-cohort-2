@@ -12,10 +12,33 @@ const normalizeProduct = (product) => ({
 });
 
 // GET all products
+// exports.getAllProducts = async (req, res, next) => {
+//   try {
+//     const result = await pool.query("SELECT * FROM products ORDER BY id ASC");
+//     res.status(200).json(result.rows.map(normalizeProduct));
+//   } catch (error) {
+//     next(error);
+//   }
+// };
+
 exports.getAllProducts = async (req, res, next) => {
   try {
+    const cachedProducts = await getJson(PRODUCT_LIST_CACHE_KEY);
+
+    if (cachedProducts) {
+      return res.json(cachedProducts);
+    }
+
     const result = await pool.query("SELECT * FROM products ORDER BY id ASC");
-    res.status(200).json(result.rows.map(normalizeProduct));
+    const products = result.rows.map(normalizeProductRow);
+
+    await setJson(
+      PRODUCT_LIST_CACHE_KEY,
+      products,
+      PRODUCT_LIST_CACHE_TTL_SECONDS,
+    );
+
+    res.json(products);
   } catch (error) {
     next(error);
   }
